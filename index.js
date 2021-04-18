@@ -6,18 +6,23 @@ const {
     sign
 } = require('crypto');
 
-var rolldata = JSON.parse(fs.readFileSync('./bets.json', 'utf-8'));
-var rooms = JSON.parse(fs.readFileSync('./rooms.json', 'utf-8'));;
+try {
+    var rolldata = JSON.parse(fs.readFileSync('./bets.json', 'utf-8'));
+} catch {
+    var rolldata = JSON.parse('{}');
+}
+try {
+    var rooms = JSON.parse(fs.readFileSync('./rooms.json', 'utf-8'));;
+} catch {
+    var rooms = JSON.parse('{}');
+}
+
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
 client.on('message', msg => {
-    if (msg.content === 'ping') {
-        msg.reply('pong');
-    }
-
     // Rolling
     if (msg.content.startsWith('roll')) {
         let str = msg.content;
@@ -28,11 +33,14 @@ client.on('message', msg => {
                 msg.channel.send(`Wrong command ${msg.author}, assuming 100 credits.`)
                 bet = 100;
             }
-            if (!rolldata[msg.author.id]) {
+            if (!rolldata[msg.author.id] || rolldata[msg.author.id].points == null) {
                 rolldata[msg.author.id] = {
                     points: 1000
                 }
+                if (bet > 1000)
+                    bet = 100;
             }
+            console.log(rolldata[msg.author.id]);
 
             if (rolldata[msg.author.id].points < bet) {
                 msg.channel.send('Not enough credits ' + `${msg.author}` + '.');
@@ -147,7 +155,6 @@ client.on('message', msg => {
                     }
                 }
             }
-
         } else if (words[1] === "incarcare") {
             if (!rolldata[msg.author.id]) {
                 rolldata[msg.author.id] = {
@@ -168,8 +175,6 @@ client.on('message', msg => {
                     msg.channel.send(`You can't access this function ${msg.author}`);
                 }
             }
-
-
         } else if (words[1] === "room") {
             if (words[2] === undefined) {
                 for (const propriety in rooms) {
