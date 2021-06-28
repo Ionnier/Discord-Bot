@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/Ionnier/Discord-Bot#readme",
   "dependencies": {
+    "@discordjs/opus": "^0.5.3",
+    "audioconcat": "^0.1.4",
     "discord.js": "^12.5.3",
     "dotenv": "^8.2.0"
   }

@@ -1,10 +1,8 @@
 const Discord = require('discord.js');
 const client = new Discord.Client();
 const fs = require('fs');
+var audioconcat = require('audioconcat')
 require('dotenv').config();
-const {
-    sign
-} = require('crypto');
 
 try {
     var rolldata = JSON.parse(fs.readFileSync('./bets.json', 'utf-8'));
@@ -17,12 +15,17 @@ try {
     var rooms = JSON.parse('{}');
 }
 
+const cuvinteFolder = new Map()
+fs.readdirSync('./files').forEach(file => {
+    cuvinteFolder.set(file, true);
+});
+console.log(cuvinteFolder)
 
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
 });
 
-client.on('message', msg => {
+client.on('message', async msg => {
     // Rolling
     if (msg.content.startsWith('roll')) {
         let str = msg.content;
@@ -236,7 +239,62 @@ client.on('message', msg => {
 
 
     }
+    if (msg.content.startsWith('customtts')) {
+        if (isReady) {
+            msg.delete();
+            isReady = false;
+            var array = msg.content.split(" ");
+            array.shift();
+            var d = await splitallways(array.join(" ").toLowerCase());
+            d.sort((a, b) => a[1] - b[1])
+            var voiceChannel = msg.member.voice.channel;
+            d.forEach((item, i, self) => self[i] = "./files/" + item[0] + ".mp3");
+            audioconcat(d)
+                .concat('all.mp3')
+                .on('start', function (command) {
+                    console.log('ffmpeg process started:', command)
+                })
+                .on('error', function (err, stdout, stderr) {
+                    console.error('Error:', err)
+                    console.error('ffmpeg stderr:', stderr)
+                })
+                .on('end', function (output) {
+                    voiceChannel.join().then(async connection => {
+                        const dispatcher = connection.play("./all.mp3");
+                        dispatcher.on("finish", end => {
+                            isReady = true;
+                            voiceChannel.leave()
+                            dispatcher.destroy();
+                            fs.unlinkSync("./all.mp3")
+                        });
+                    }).catch(err => console.log(err));
+                })
+        }
+    }
 
 });
+
+function splitallways(str) {
+    return new Promise((resolve, reject) => {
+        var d = [];
+        copy = str;
+        for (var i = str.length; i >= 1; i--) {
+            for (var j = 0; j < str.length; j++) {
+                var current = str.substring(j, j + i);
+                if (current.length == i) {
+                    if (cuvinteFolder.has(current + '.mp3')) {
+                        str = str.substring(0, j) + '*'.repeat(i) + str.substring(j + i)
+                        d.push([current, j])
+                        i = str.length + 1;
+                        j = -1;
+                        break;
+                    }
+                }
+            }
+        }
+        resolve(d)
+    })
+}
+var isReady = true;
 
 client.login(process.env.DISCORD_TOKEN);
